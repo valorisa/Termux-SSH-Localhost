@@ -31,7 +31,7 @@ Si tu cherches seulement la solution, voici les trois points à retenir :
 
 1. **Sous Termux, `sshd` écoute sur le port 8022, pas 22.** Le port 22 est un port privilégié (inférieur à 1024) que Termux, sans droits root, ne peut pas ouvrir. Il faut donc toujours préciser `-p 8022`.
 2. **Pour une connexion par clé, la clé publique doit être dans `~/.ssh/authorized_keys`** du compte sur lequel on se connecte. Si ce n'est pas le cas, le serveur refuse les clés et retombe silencieusement sur le mot de passe.
-3. **Les avertissements `setlocale` viennent d'un locale inexistant** (`fr_FR.UTF-8`) exporté via `LC_ALL`. Il faut corriger la source de l'export, puis **redémarrer `sshd`**, qui conserve l'environnement dans lequel il a été lancé.
+3. **Les avertissements `setlocale` n'ont aucun lien avec SSH.** Ils apparaissent à chaque ouverture de session Termux, parce qu'un locale inexistant (`fr_FR.UTF-8`) est exporté via `LC_ALL`. Il faut corriger la source de l'export. Si `sshd` tourne déjà, il faut en plus le **redémarrer** : il conserve l'environnement dans lequel il a été lancé.
 
 Séquence minimale :
 
@@ -70,7 +70,7 @@ Trois erreurs distinctes étaient mêlées :
 - une **mauvaise option `-i`** dans l'une des commandes (pointant vers la clé publique `.pub` au lieu de la clé privée) ;
 - plus tard, une **clé non autorisée** côté serveur, masquée par un repli automatique sur le mot de passe.
 
-S'y est ajouté, une fois la connexion établie, un flot d'avertissements `bash: warning: setlocale: ...` à chaque ouverture de session SSH.
+S'y ajoutait un flot d'avertissements `bash: warning: setlocale: ...` à chaque ouverture d'une session Termux, avec ou sans SSH. Ce problème est indépendant de SSH : il touchait le shell Termux lui-même, et la session SSH l'affichait aussi.
 
 ---
 
@@ -230,7 +230,7 @@ Une paire telle que `id_ed25519_client_vers_serveur` illustre une règle génér
 
 ### 6.1 Le symptôme
 
-Chaque ouverture de session SSH affichait un bloc de lignes de ce type :
+Chaque ouverture de session Termux, directe ou via SSH, affichait un bloc de lignes de ce type :
 
 ```text
 bash: warning: setlocale: LC_CTYPE: cannot change locale (fr_FR.UTF-8): No such file or directory
@@ -273,15 +273,15 @@ LC_ALL=fr_FR.UTF-8
 .../usr/etc/profile.d/locale.sh:2:export LC_ALL=fr_FR.UTF-8
 ```
 
-La source est `$PREFIX/etc/profile.d/locale.sh`. Ce fichier n'a pas été identifié comme appartenant à une installation Termux standard : il provient vraisemblablement d'une configuration locale ou d'un script de mise en place.
+La source est `$PREFIX/etc/profile.d/locale.sh`, ajouté lors d'une configuration antérieure des locales en français. Ce fichier n'a pas été identifié comme appartenant à une installation Termux standard.
 
 ### 6.4 Pourquoi `export LANG=en_US.UTF-8` dans `~/.bashrc` ne servait à rien
 
 Les variables `LC_*` ont priorité sur `LANG`, et **`LC_ALL` l'emporte sur toutes les autres**. Tant que `LC_ALL=fr_FR.UTF-8` est défini, la valeur de `LANG` est ignorée pour tous les aspects du locale. Corriger `LANG` seul ne pouvait donc pas résoudre le problème.
 
-### 6.5 Pourquoi seulement en SSH
+### 6.5 Le cas particulier de `sshd`
 
-Le shell local de Termux et une session SSH ne partagent pas la même chaîne d'initialisation. Le processus `sshd` conserve l'environnement dans lequel il a été lancé et le transmet aux sessions qu'il ouvre. On peut l'inspecter directement :
+Le problème n'est pas propre à SSH : le shell local de Termux hérite du même `LC_ALL`, comme le montre `env | grep -E '^(LANG|LC_)'` en 6.3. En revanche, le processus `sshd` conserve l'environnement dans lequel il a été lancé et le transmet aux sessions qu'il ouvre : corriger le fichier ne suffit donc pas, il faut aussi le redémarrer. On peut inspecter son environnement directement :
 
 ```sh
 tr '\0' '\n' < /proc/$(pgrep -x sshd | head -n1)/environ | grep -E '^(LANG|LC_)'
@@ -344,7 +344,7 @@ Il faut ensuite :
 
 ### 6.8 Constat
 
-Après ces trois étapes, une nouvelle session SSH s'ouvre sans aucun avertissement. Noter que fermer Termux ne suffisait pas : au premier contrôle, `sshd` tournait toujours avec `fr_FR.UTF-8`. Seul le redémarrage explicite de `sshd` a appliqué le nouvel environnement.
+Après ces trois étapes, Termux s'ouvre sans aucun avertissement, de même qu'une nouvelle session SSH. Noter que fermer Termux ne suffisait pas pour `sshd` : au premier contrôle, il tournait toujours avec `fr_FR.UTF-8`. Seul son redémarrage explicite a appliqué le nouvel environnement.
 
 ### 6.9 Ce qu'il ne faut pas faire
 
@@ -504,6 +504,7 @@ Cette section recense les erreurs de raisonnement survenues pendant le dépannag
 6. **Oublier que `sshd` conserve son environnement.** Modifier le fichier de configuration du locale ne suffit pas : il faut redémarrer le démon.
 7. **Redémarrer `sshd` depuis une session SSH.** Cela coupe la session en cours. Toujours le faire depuis une session locale.
 8. **Relancer `sshd` alors qu'il tourne déjà.** Aucun message d'erreur n'apparaît, mais rien ne change.
+9. **Attribuer à SSH un problème qui n'en dépendait pas.** Les avertissements `setlocale` venaient du shell Termux lui-même (`LC_ALL` exporté par `profile.d/locale.sh`) et apparaissaient avec ou sans SSH. Avant d'en déduire la cause, vérifier dans quels contextes le symptôme se produit.
 
 ---
 
