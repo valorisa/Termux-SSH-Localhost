@@ -6,6 +6,66 @@ Ce dépôt documente une session de dépannage réelle, étape par étape : les 
 
 ---
 
+## Préambule : comprendre les locales
+
+Une partie de ce guide traite d'avertissements `setlocale`. Ce préambule pose les notions utiles pour les comprendre, sans prérequis.
+
+### Qu'est-ce qu'un locale ?
+
+Un **locale** est un ensemble de conventions régionales appliquées par un programme : langue des messages, jeu de caractères (encodage), ordre de tri alphabétique, format des dates, des nombres et des montants. Son nom suit la forme `langue_PAYS.ENCODAGE` :
+
+- `fr_FR.UTF-8` : français de France, encodage UTF-8 ;
+- `en_US.UTF-8` : anglais des États-Unis, encodage UTF-8 ;
+- `C` (ou `C.UTF-8`) : locale neutre et minimal, utilisé par défaut quand rien d'autre n'est disponible.
+
+Un locale n'est utilisable que s'il est **présent sur la machine**. Demander `fr_FR.UTF-8` sur un système qui ne l'a pas n'a pas de sens pour lui : c'est la source de l'erreur traitée plus loin.
+
+### Les variables d'environnement qui le choisissent
+
+Le locale se règle avec des variables d'environnement, lues dans un ordre de priorité fixe :
+
+| Variable | Rôle | Priorité |
+|---|---|---|
+| `LC_ALL` | Force tous les aspects du locale d'un coup | 1 (la plus haute) |
+| `LC_CTYPE`, `LC_COLLATE`, `LC_MESSAGES`, `LC_TIME`, `LC_NUMERIC`, `LC_MONETARY` | Une catégorie chacune | 2 |
+| `LANG` | Valeur par défaut pour tout ce qui n'est pas précisé | 3 (la plus basse) |
+
+Les catégories les plus courantes :
+
+- `LC_CTYPE` : classification et encodage des caractères ;
+- `LC_COLLATE` : ordre de tri ;
+- `LC_MESSAGES` : langue des messages du programme ;
+- `LC_TIME`, `LC_NUMERIC`, `LC_MONETARY` : dates, nombres, monnaie.
+
+Exemples : avec `LANG=fr_FR.UTF-8` et `LC_COLLATE=C`, le tri suit le locale `C` et le reste suit le français. Avec `LC_ALL=en_US.UTF-8`, tout suit `en_US.UTF-8`, quelles que soient les autres variables.
+
+### Que fait `setlocale()` ?
+
+`setlocale()` est une **fonction de la bibliothèque C**. Un programme l'appelle au démarrage pour demander : « applique le locale décrit par les variables d'environnement ». Bash le fait à chaque lancement.
+
+- Si le locale demandé existe, il est appliqué et rien ne s'affiche.
+- S'il n'existe pas, l'appel échoue. Le programme continue avec le locale par défaut (`C`), et bash l'indique par un avertissement :
+
+```text
+bash: warning: setlocale: LC_CTYPE: cannot change locale (fr_FR.UTF-8): No such file or directory
+```
+
+Ce message nomme la catégorie qui a échoué (`LC_CTYPE`, `LC_COLLATE`, `LC_ALL`) puis le locale demandé et introuvable.
+
+### Quelle gravité ?
+
+L'avertissement n'empêche pas le shell de fonctionner. Il est cependant bruyant : il s'affiche à chaque ouverture de session et peut polluer la sortie d'erreur de scripts ou d'outils qui la lisent. Il signale aussi une incohérence de configuration qu'il vaut mieux corriger.
+
+### Pour inspecter sa propre configuration
+
+```sh
+env | grep -E '^(LANG|LC_)'
+```
+
+Cette commande affiche les variables de locale définies dans le shell courant. C'est le point de départ du diagnostic détaillé en section 6.
+
+---
+
 ## Table des matières
 
 1. [Résumé rapide](#1-résumé-rapide)
@@ -238,7 +298,7 @@ bash: warning: setlocale: LC_COLLATE: cannot change locale (fr_FR.UTF-8): No suc
 bash: warning: setlocale: LC_ALL: cannot change locale (fr_FR.UTF-8): No such file or directory
 ```
 
-Le locale `fr_FR.UTF-8` n'est pas installé dans cet environnement Termux. Bash tente de l'appliquer, échoue, et le signale.
+Le locale `fr_FR.UTF-8` n'est pas installé dans cet environnement Termux. Bash tente de l'appliquer, échoue, et le signale. Le mécanisme est détaillé dans le préambule.
 
 ### 6.2 Première piste, fausse
 
