@@ -157,7 +157,7 @@ ssh -p 8022 -i ~/.ssh/id_ed25519 localhost
 La connexion a réussi, mais **avec un mot de passe** :
 
 ```text
-u0_a396@localhost's password:
+u0_aXXX@localhost's password:
 ```
 
 L'intention était une authentification par clé. Le comportement de `ssh` est le suivant : il présente chaque clé disponible, et si le serveur les refuse toutes, il propose les méthodes suivantes (`keyboard-interactive`, puis `password`). La connexion « marche », ce qui masque le fait que la clé ne sert à rien.
