@@ -222,7 +222,7 @@ C'est le signe que la clé est acceptée. La passphrase protège la clé privée
 
 ### 5.7 Cas d'une paire destinée à une autre machine
 
-Une paire telle que `id_ed25519_CPH1917_to_Asus_ROG_Z13` illustre une règle générale : dans un scénario client → serveur, c'est la clé **publique du client** qui doit figurer dans `authorized_keys` **du serveur**. Ajouter la clé publique sur la machine cliente ne sert à rien.
+Une paire telle que `id_ed25519_client_vers_serveur` illustre une règle générale : dans un scénario client → serveur, c'est la clé **publique du client** qui doit figurer dans `authorized_keys` **du serveur**. Ajouter la clé publique sur la machine cliente ne sert à rien.
 
 ---
 
@@ -512,7 +512,7 @@ Cette section recense les erreurs de raisonnement survenues pendant le dépannag
 ```text
 Termux-SSH-Localhost/
 ├── README.md      # Ce document
-└── LICENSE        # À ajouter
+└── LICENSE        # Licence MIT
 ```
 
 Le dépôt peut s'enrichir ultérieurement d'un script de diagnostic (`diagnostic.sh`) reprenant les vérifications des sections 4 à 6, et d'un exemple de fichier `ssh_config`.
@@ -533,4 +533,4 @@ Avant de proposer une modification, merci de vérifier la commande sur un appare
 
 ## 14. Licence
 
-À définir par l'auteur du dépôt. Ajouter un fichier `LICENSE` à la racine une fois le choix fait.
+Ce dépôt est distribué sous licence MIT. Voir le fichier [LICENSE](LICENSE).
